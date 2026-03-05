@@ -4,7 +4,7 @@ import java.util.Scanner;
 public class Controller {
 
     Hotel hotel = new Hotel();
-    Scanner scanner = new Scanner(System.in);
+    Scanner scanner;
 
 
     public Controller() {
@@ -29,7 +29,7 @@ public class Controller {
                 case "checkin":
                     checkIn();
                     break;
-                case "displayIns":
+                case "display_checkin":
                     hotel.displayCheckIns();
                     break;
                 case "!help":
@@ -39,7 +39,6 @@ public class Controller {
                     System.out.println("Exiting system...");
                     running = false;
                     break;
-
                 default:
                     System.out.println("Unknown command.");
             }
@@ -90,7 +89,7 @@ public class Controller {
         System.out.println("Hotel help menu.");
         System.out.println("Available commands: ");
         System.out.println("'checkin', - add a new checkin");
-        System.out.println("'displayIns', - displays all current checkins");
+        System.out.println("'display_checkin', - displays all current checkins");
         System.out.println("'exit', - exits the program");
     }
 
