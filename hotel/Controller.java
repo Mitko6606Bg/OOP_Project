@@ -7,66 +7,94 @@ public class Controller {
     Scanner scanner = new Scanner(System.in);
 
 
-    public void displayMenu() {
+    public Controller() {
+        this.scanner = new Scanner(System.in);
+    }
 
-        String choice = "0";
 
-        while (!(choice.equals("4"))) {
-            System.out.println("1. Check In");
-            System.out.println("2. Display Checkins");
-            System.out.println("3. ----");
-            System.out.println("4. Exit");
-            System.out.print(">> ");
-            if (scanner.hasNextInt()) {
-                choice = scanner.nextLine();
+    public void startCommandLine() {
+        System.out.println("Welcome to the Hotel Check-In System.");
+        System.out.println("Available commands: 'checkin', 'exit'");
 
-                if (choice.equals("1")) {
+        boolean running = true;
+
+        while (running) {
+            System.out.print("> "); // The CMD prompt symbol
+            String input = scanner.nextLine().trim();
+
+            String[] parts = input.split(" ");
+            String command = parts[0].toLowerCase();
+
+            switch (command) {
+                case "checkin":
                     checkIn();
-                }
-                if (choice.equals("2")) {
+                    break;
+                case "displayIns":
                     hotel.displayCheckIns();
-                }
-                if (choice.equals("3")) {
+                    break;
+                case "!help":
+                    help();
+                    break;
+                case "exit":
+                    System.out.println("Exiting system...");
+                    running = false;
+                    break;
 
-                }
+                default:
+                    System.out.println("Unknown command.");
             }
-            else {
-                System.out.println("Wrong input!");
-                choice = scanner.nextLine();
-
-            }
-
         }
-
-
-        System.out.println("Bye!");
         scanner.close();
     }
 
 
+
+
     public void checkIn(){
 
-        int room;
-        String fromDate;
-        String toDate;
-        String note;
-        int guests;
+        try {
+            System.out.print("Room: ");
+            int room = Integer.parseInt(scanner.nextLine().trim());
 
-        System.out.print("Room: ");
-        room = Integer.parseInt(scanner.nextLine());
-        System.out.print("From: ");
-        fromDate = scanner.nextLine();
-        System.out.print("To: ");
-        toDate = scanner.nextLine();
-        System.out.print("Note: ");
-        note = scanner.nextLine();
-        System.out.print("Guests: ");
-        guests = scanner.nextInt();
+            System.out.print("From (e.g., YYYY-MM-DD): ");
+            String fromDate = scanner.nextLine().trim();
 
-        CheckIn checkIn = new CheckIn(room,fromDate,toDate,note,guests);
-        hotel.addCheckIn(checkIn);
+            System.out.print("To (e.g., YYYY-MM-DD): ");
+            String toDate = scanner.nextLine().trim();
+
+            System.out.print("Note: ");
+            String note = scanner.nextLine().trim();
+
+            System.out.print("Guests: ");
+            int guests = Integer.parseInt(scanner.nextLine().trim());
+
+            CheckIn checkIn = new CheckIn(room, fromDate, toDate, note, guests);
+            hotel.addCheckIn(checkIn);
+
+            System.out.println("Success! Checked " + guests + " guests into room " + room + ".");
+
+        } catch (NumberFormatException e) {
+            System.out.println("Error: Room and Guests must be numbers. Check-in cancelled.");
+        }
 
     }
+
+
+
+
+
+
+
+
+    public void help(){
+        System.out.println("Hotel help menu.");
+        System.out.println("Available commands: ");
+        System.out.println("'checkin', - add a new checkin");
+        System.out.println("'displayIns', - displays all current checkins");
+        System.out.println("'exit', - exits the program");
+    }
+
+
 
 
 }
