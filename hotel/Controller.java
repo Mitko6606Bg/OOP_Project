@@ -1,12 +1,19 @@
 package oop.project.hotel;
-import java.util.List;
-import java.util.Scanner;
+import com.sun.net.httpserver.Authenticator;
+
+import javax.swing.text.DateFormatter;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.time.format.DateTimeParseException;
 
 public class Controller {
 
     String filePath;
+    String checkinFilePath;
     FileController fileController = new FileController();
     private List<Room> rooms;
+    private List<CheckIn> checkins;
     Hotel hotel = new Hotel();
     Scanner scanner;
 
@@ -14,6 +21,8 @@ public class Controller {
 
     public Controller() {
         this.scanner = new Scanner(System.in);
+        this.rooms = new ArrayList<>();
+        this.checkins = new ArrayList<>();
     }
 
 
@@ -42,15 +51,35 @@ public class Controller {
                 String[] parts = input.split(" ");
                 String command = parts[0].toLowerCase();
 
+
                 switch (command) {
                     case "checkin":
                         checkIn();
                         break;
+                    case "checkout":
+                        if (parts.length > 1) {
+                            checkOut(parts[1]);
+                        } else {
+                            System.out.println("Invalid command. No room number ?");
+                        }
+                        break;
                     case "display_checkin":
-                        hotel.displayCheckIns();
+                        if(checkinFilePath == null){
+                            System.out.println("No checkins file opened! Open a file now using: open -c <filepath> to continue.");
+                            break;
+                        }
+                        else{
+                            showCheckins();
+                        }
                         break;
                     case "open":
-                        openFile(parts[1].toLowerCase());
+                        String attribute = parts[1];
+                        if(attribute.equals("-c")){
+                            openCheckinFile(parts[2].toLowerCase());
+                        }
+                        else{
+                            openFile(parts[1].toLowerCase());
+                        }
                         break;
                     case "save":
                         saveFile();
@@ -58,11 +87,44 @@ public class Controller {
                     case "showr":
                         showRooms();
                         break;
+                    case "availability":
+                        java.time.LocalDate date;
+                        if (parts.length > 1) {
+                            date = LocalDate.parse(parts[1]);
+                        } else {
+                            date = LocalDate.now();
+                        }
+                        roomAvailability(date);
+                        break;
+                    case "find":
+                        LocalDate fromDate;
+                        LocalDate toDate;
+                        if (parts.length > 3) {
+                            fromDate = LocalDate.parse(parts[2]);
+                            toDate = LocalDate.parse(parts[3]);
+                            findRoomsWithBeds(fromDate,toDate,Integer.parseInt(parts[1]));
+                        } else {
+                            System.out.println("Invalid command. Wrong syntax ?");
+                        }
+                        break;
+                    case "!find":
+                        LocalDate fromDateV;
+                        LocalDate toDateV;
+                        if (parts.length > 3) {
+                            fromDateV = LocalDate.parse(parts[2]);
+                            toDateV = LocalDate.parse(parts[3]);
+                            emergencyRoomSearch(fromDateV,toDateV,Integer.parseInt(parts[1]));
+                        } else {
+                            System.out.println("Invalid command. Wrong syntax ?");
+                        }
+
+                        break;
                     case "!help":
                         help();
                         break;
                     case "exit":
                         System.out.println("Exiting system...");
+                        saveFile();
                         running = false;
                         break;
                     default:
@@ -79,7 +141,15 @@ public class Controller {
     public void openFile(String path){
         filePath = path;
         fileController.readRoomsFile(filePath);
+
     }
+
+    public void openCheckinFile(String path){
+        checkinFilePath = path;
+        fileController.readCheckInsFile(checkinFilePath);
+
+    }
+
 
     public void saveFile(){
         fileController.setRooms(rooms);
@@ -88,6 +158,10 @@ public class Controller {
 
     public void showRooms(){
         fileController.displayRooms();
+    }
+
+    public void showCheckins(){
+        fileController.displayCheckIns();
     }
 
 
@@ -117,11 +191,30 @@ public class Controller {
                 return;
             }
 
-            System.out.print("From (e.g., YYYY-MM-DD): ");
-            String fromDate = scanner.nextLine().trim();
+            LocalDate fromDate = null;
+            while (fromDate == null) {
+                System.out.print("From (e.g., YYYY-MM-DD): ");
+                try {
+                    fromDate = LocalDate.parse(scanner.nextLine().trim());
+                } catch (DateTimeParseException e) {
+                    System.out.println("Invalid date format! Please strictly use YYYY-MM-DD.");
+                }
+            }
 
-            System.out.print("To (e.g., YYYY-MM-DD): ");
-            String toDate = scanner.nextLine().trim();
+            LocalDate toDate = null;
+            while (toDate == null) {
+                System.out.print("To (e.g., YYYY-MM-DD): ");
+                try {
+                    toDate = LocalDate.parse(scanner.nextLine().trim());
+
+                    if (!toDate.isAfter(fromDate)) {
+                        System.out.println("Error: 'To' date must be after 'From' date.");
+                        toDate = null;
+                    }
+                } catch (DateTimeParseException e) {
+                    System.out.println("Invalid date format! Please strictly use YYYY-MM-DD.");
+                }
+            }
 
             System.out.print("Note: ");
             String note = scanner.nextLine().trim();
@@ -132,7 +225,12 @@ public class Controller {
             roomToCheckin.setAvailable(false);
 
             CheckIn checkIn = new CheckIn(targetRoom, fromDate, toDate, note, guests);
+
             hotel.addCheckIn(checkIn);
+            fileController.addCheckInToFile(checkIn);
+            checkins.add(checkIn);
+            fileController.setCheckIns(checkins);
+
 
             System.out.println("Success! Checked " + guests + " guests into room " + targetRoom + ".");
 
@@ -142,6 +240,200 @@ public class Controller {
         }
     }
 
+    public void checkOut(String roomNumber){
+        rooms = fileController.getRooms();
+        checkins = fileController.getCheckIns();
+
+        for (Room room : rooms){
+            boolean found = false;
+
+            if(room.getRoomNumber().equals(roomNumber)){
+                room.setAvailable(true);
+                for (CheckIn checkin : checkins){
+                    if(checkin.getRoom().equals(roomNumber)){
+                        checkins.remove(checkin);
+                        fileController.setCheckIns(checkins);
+                        fileController.writeCheckInsToFile();
+                        found = true;
+                    }
+                }
+            }
+            if (found) {
+                System.out.println("Successfully checkout from room: " + roomNumber);
+                break;
+            }
+        }
+
+    }
+
+    public void roomAvailability(LocalDate targetDate) {
+        checkins = fileController.getCheckIns();
+        rooms = fileController.getRooms();
+        System.out.println("\n--- Rooms Available on " + targetDate + " ---");
+        boolean atLeastOne = false;
+
+        for (Room room : rooms) {
+            boolean isAvailable = true;
+
+            for (CheckIn checkin : checkins) {
+                if (Objects.equals(room.getRoomNumber(), checkin.getRoom())) {
+
+                    boolean isOverlapping = !targetDate.isBefore(checkin.getFromDate()) &&
+                            !targetDate.isAfter(checkin.getToDate());
+
+                    if (isOverlapping) {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isAvailable) {
+                System.out.println(room.toString());
+                atLeastOne = true;
+            }
+        }
+
+
+
+
+        if (!atLeastOne) {
+            System.out.println("No rooms are available on this date.");
+        }
+        System.out.println("----------------------------------------\n");
+    }
+
+    public void findRoomsWithBeds(LocalDate fromDate, LocalDate toDate, int requiredBeds) {
+        checkins = fileController.getCheckIns();
+        rooms = fileController.getRooms();
+
+        System.out.println("\n--- Rooms Available from " + fromDate + " to " + toDate + " (" + requiredBeds + "+ beds) ---");
+
+        List<Room> availableRooms = new ArrayList<>();
+
+        for (Room room : rooms) {
+            if (room.getBeds() < requiredBeds) {
+                continue;
+            }
+
+            boolean isAvailable = true;
+
+            for (CheckIn checkin : checkins) {
+                if (Objects.equals(room.getRoomNumber(), checkin.getRoom())) {
+
+                    boolean isOverlapping = fromDate.isBefore(checkin.getToDate()) &&
+                            toDate.isAfter(checkin.getFromDate());
+
+                    if (isOverlapping) {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isAvailable) {
+                availableRooms.add(room);
+            }
+        }
+
+        availableRooms.sort(Comparator.comparingInt(Room::getBeds));
+
+        if (availableRooms.isEmpty()) {
+            System.out.println("No rooms are available matching those dates and bed requirements.");
+        } else {
+            for (Room room : availableRooms) {
+                System.out.println(room.toString());
+            }
+        }
+        System.out.println("----------------------------------------\n");
+    }
+
+    private Room findAlternativeRoom(CheckIn conflict, String originalRoomNum, List<Room> reservedAlternatives) {
+        for (Room altRoom : rooms) {
+            if (altRoom.getRoomNumber().equals(originalRoomNum)) continue;
+
+            if (altRoom.getBeds() < conflict.getGuests()) continue;
+
+            if (reservedAlternatives.contains(altRoom)) continue;
+
+            boolean isAvailable = true;
+            for (CheckIn c : checkins) {
+                if (c.getRoom().equals(altRoom.getRoomNumber())) {
+                    boolean isOverlapping = conflict.getFromDate().isBefore(c.getToDate()) &&
+                            conflict.getToDate().isAfter(c.getFromDate());
+                    if (isOverlapping) {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isAvailable) {
+                return altRoom;
+            }
+        }
+        return null;
+    }
+
+    public void emergencyRoomSearch(LocalDate fromDate, LocalDate toDate, int requiredBeds) {
+        checkins = fileController.getCheckIns();
+        rooms = fileController.getRooms();
+
+        System.out.println("\n--- Emergency VIP Room Search (" + fromDate + " to " + toDate + ", " + requiredBeds + "+ beds) ---");
+        boolean solutionFound = false;
+
+        for (Room targetRoom : rooms) {
+            if (targetRoom.getBeds() < requiredBeds) continue;
+
+            List<CheckIn> overlappingCheckIns = new ArrayList<>();
+
+
+            for (CheckIn checkin : checkins) {
+                if (Objects.equals(targetRoom.getRoomNumber(), checkin.getRoom())) {
+                    boolean isOverlapping = fromDate.isBefore(checkin.getToDate()) &&
+                            toDate.isAfter(checkin.getFromDate());
+                    if (isOverlapping) {
+                        overlappingCheckIns.add(checkin);
+                    }
+                }
+            }
+
+            if (overlappingCheckIns.size() > 0 && overlappingCheckIns.size() <= 2) {
+
+                boolean canRelocateAll = true;
+                List<String> relocationPlan = new ArrayList<>();
+                List<Room> reservedAlternatives = new ArrayList<>();
+
+                for (CheckIn conflict : overlappingCheckIns) {
+                    Room alternative = findAlternativeRoom(conflict, targetRoom.getRoomNumber(), reservedAlternatives);
+
+                    if (alternative == null) {
+                        canRelocateAll = false;
+                        break;
+                    } else {
+                        reservedAlternatives.add(alternative);
+                        relocationPlan.add("Move reservation from room " + conflict.getRoom() + " (Dates: " + conflict.getFromDate() + " to " + conflict.getToDate() + ") -> to ROOM " + alternative.getRoomNumber());
+                    }
+                }
+
+                if (canRelocateAll) {
+                    System.out.println("Accommodate the VIP guest in room " + targetRoom.getRoomNumber());
+                    System.out.println("To make this happen, the following changes:");
+                    for (String step : relocationPlan) {
+                        System.out.println("   - " + step);
+                    }
+                    System.out.println("----------------------------------------");
+                    solutionFound = true;
+                    break;
+                }
+            }
+        }
+
+        if (!solutionFound) {
+            System.out.println("It is not possible to free up a room by relocating a maximum of 2 reservations.");
+        }
+        System.out.println();
+    }
 
     public void help(){
         System.out.println("Hotel help menu.");

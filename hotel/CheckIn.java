@@ -1,14 +1,16 @@
 package oop.project.hotel;
 
+import java.time.LocalDate;
+
 public class CheckIn {
 
     private String room;
-    private String fromDate;
-    private String toDate;
+    private LocalDate fromDate;
+    private LocalDate toDate;
     private String note;
     private int guests;
 
-    public CheckIn(String room, String fromDate, String toDate, String note, int guests) {
+    public CheckIn(String room, LocalDate fromDate, LocalDate toDate, String note, int guests) {
         this.room = room;
         this.fromDate = fromDate;
         this.toDate = toDate;
@@ -25,19 +27,19 @@ public class CheckIn {
         this.room = room;
     }
 
-    public String getFromDate() {
+    public LocalDate getFromDate() {
         return fromDate;
     }
 
-    public void setFromDate(String fromDate) {
+    public void setFromDate(LocalDate fromDate) {
         this.fromDate = fromDate;
     }
 
-    public String getToDate() {
+    public LocalDate getToDate() {
         return toDate;
     }
 
-    public void setToDate(String toDate) {
+    public void setToDate(LocalDate toDate) {
         this.toDate = toDate;
     }
 

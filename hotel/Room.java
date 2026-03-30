@@ -1,17 +1,21 @@
 package oop.project.hotel;
 
+import java.time.LocalDate;
+
 public class Room {
 
     private String roomNumber;
     private String type;
     private int beds;
-    private boolean available;
+    private boolean availableNow;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
-    public Room(String roomNumber, String type, int beds,boolean available) {
+    public Room(String roomNumber, String type, int beds,boolean availableNow) {
         this.roomNumber = roomNumber;
         this.type = type;
         this.beds = beds;
-        this.available = available;
+        this.availableNow = availableNow;
     }
 
     public String getRoomNumber() {
@@ -27,15 +31,15 @@ public class Room {
     }
 
     public boolean isAvailable() {
-        return available;
+        return availableNow;
     }
 
     public void setAvailable(boolean available) {
-        this.available = available;
+        this.availableNow = available;
     }
 
     @Override
     public String toString() {
-        return "Room " + roomNumber + " (" + type + ", " + beds + " beds" + ", available " + available + " )";
+        return "Room " + roomNumber + " (" + type + ", " + beds + " beds" + ", available now " + availableNow + " )";
     }
 }
