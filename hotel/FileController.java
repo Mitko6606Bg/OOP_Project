@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 import java.io.IOException;
+import java.util.Scanner;
+
 
 public class FileController {
 
@@ -14,26 +16,39 @@ public class FileController {
     private String checkInsFilePath;
     private List<CheckIn> checkIns;
 
+    Scanner scanner;
+
     public FileController() {
         this.rooms = new ArrayList<>();
         this.checkIns = new ArrayList<>();
+        this.scanner = new Scanner(System.in);
     }
 
-    public void readRoomsFile(String path) {
+    public boolean readRoomsFile(String path) {
         filePath = path;
         rooms.clear();
         File file = new File(filePath);
 
         if (!file.exists()) {
-            try {
-                if (file.getParentFile() != null) {
-                    file.getParentFile().mkdirs();
+            System.out.println("No file with that name ! Do you want to create a file at path: "+ path);
+            System.out.println("y/n");
+            String choice = scanner.nextLine().trim();
+
+            if (choice.equals("y")){
+                try {
+                    if (file.getParentFile() != null) {
+                        file.getParentFile().mkdirs();
+                    }
+                    file.createNewFile();
+                    System.out.println("File created at path: "+path);
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(1);
                 }
-                file.createNewFile();
-                return;
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.exit(1);
+            }
+            else{
+                return false;
             }
         }
 
@@ -52,7 +67,8 @@ public class FileController {
                         String type = currentRoomData.get(1);
                         int beds = Integer.parseInt(currentRoomData.get(2));
                         boolean available = Boolean.parseBoolean(currentRoomData.get(3));
-                        rooms.add(new Room(roomNumber, type, beds,available));
+                        String note = currentRoomData.get(4);
+                        rooms.add(new Room(roomNumber, type, beds,available,note));
 
                         currentRoomData.clear();
                     }
@@ -72,6 +88,7 @@ public class FileController {
             e.printStackTrace();
             System.exit(1);
         }
+        return true;
     }
 
     public void writeToFile() {
@@ -86,6 +103,8 @@ public class FileController {
                 writer.write(String.valueOf(room.getBeds()));
                 writer.newLine();
                 writer.write(String.valueOf(room.isAvailable()));
+                writer.newLine();
+                writer.write(String.valueOf(room.getNote()));
                 writer.newLine();
 
                 if (i < rooms.size() - 1) {

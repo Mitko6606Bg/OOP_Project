@@ -8,14 +8,16 @@ public class Room {
     private String type;
     private int beds;
     private boolean availableNow;
+    private String note;
     private LocalDate startDate;
     private LocalDate endDate;
 
-    public Room(String roomNumber, String type, int beds,boolean availableNow) {
+    public Room(String roomNumber, String type, int beds,boolean availableNow, String note) {
         this.roomNumber = roomNumber;
         this.type = type;
         this.beds = beds;
         this.availableNow = availableNow;
+        this.note = note;
     }
 
     public String getRoomNumber() {
@@ -38,8 +40,17 @@ public class Room {
         this.availableNow = available;
     }
 
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
     @Override
     public String toString() {
-        return "Room " + roomNumber + " (" + type + ", " + beds + " beds" + ", available now " + availableNow + " )";
+        return "Room " + roomNumber + " (" + type + ", " + beds + " beds" + ", available: " + availableNow + ",Note: " + note + ")";
     }
 }

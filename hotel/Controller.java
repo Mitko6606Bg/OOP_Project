@@ -1,9 +1,5 @@
 package oop.project.hotel;
-import com.sun.net.httpserver.Authenticator;
-
-import javax.swing.text.DateFormatter;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.time.format.DateTimeParseException;
 
@@ -14,7 +10,6 @@ public class Controller {
     FileController fileController = new FileController();
     private List<Room> rooms;
     private List<CheckIn> checkins;
-    Hotel hotel = new Hotel();
     Scanner scanner;
 
 
@@ -119,6 +114,23 @@ public class Controller {
                         }
 
                         break;
+                    case "unavailable":
+                        if(!checkIfCheckinFileIsOpened()){
+                            LocalDate fromDateU;
+                            LocalDate toDateU;
+                            if (parts.length > 3) {
+                                fromDateU = LocalDate.parse(parts[2]);
+                                toDateU = LocalDate.parse(parts[3]);
+                                makeRoomUnavailable(parts[1],fromDateU,toDateU,parts[4]);
+                            } else {
+                                System.out.println("Invalid command. Wrong syntax ?");
+                            }
+                        }
+                        else{
+                            System.out.println("Open a Checkin file using: open -c <filepath> more in !help");
+                            break;
+                        }
+                        break;
                     case "!help":
                         help();
                         break;
@@ -139,9 +151,10 @@ public class Controller {
 
 
     public void openFile(String path){
-        filePath = path;
-        fileController.readRoomsFile(filePath);
 
+        if(fileController.readRoomsFile(path)){
+            filePath = path;
+        }
     }
 
     public void openCheckinFile(String path){
@@ -150,6 +163,14 @@ public class Controller {
 
     }
 
+    public boolean checkIfCheckinFileIsOpened(){
+       if (checkinFilePath != null){
+           return false;
+       }
+       else{
+           return true;
+       }
+    }
 
     public void saveFile(){
         fileController.setRooms(rooms);
@@ -226,7 +247,6 @@ public class Controller {
 
             CheckIn checkIn = new CheckIn(targetRoom, fromDate, toDate, note, guests);
 
-            hotel.addCheckIn(checkIn);
             fileController.addCheckInToFile(checkIn);
             checkins.add(checkIn);
             fileController.setCheckIns(checkins);
@@ -433,6 +453,38 @@ public class Controller {
             System.out.println("It is not possible to free up a room by relocating a maximum of 2 reservations.");
         }
         System.out.println();
+    }
+
+    public void makeRoomUnavailable(String roomNumber, LocalDate fromDate, LocalDate toDate, String note) {
+        checkins = fileController.getCheckIns();
+        rooms = fileController.getRooms();
+
+        Room roomToUnavailable= null;
+        for (Room r : rooms) {
+            if (r.getRoomNumber().equals(roomNumber)) {
+                roomToUnavailable = r;
+                break;
+            }
+        }
+
+        if (roomToUnavailable == null) {
+            System.out.println("Error: Room " + roomNumber + " does not exist.");
+            return;
+        }
+
+        roomToUnavailable.setNote(note);
+        roomToUnavailable.setAvailable(false);
+
+        CheckIn unavailable = new CheckIn(roomNumber, fromDate, toDate, note, 0);
+
+        checkins.add(unavailable);
+        fileController.setCheckIns(checkins);
+        fileController.writeCheckInsToFile();
+        fileController.setRooms(rooms);
+
+        System.out.println("   Room " + roomNumber + " is set to unavailable!");
+        System.out.println("   Dates: " + fromDate + " to " + toDate);
+        System.out.println("   Note: " + note);
     }
 
     public void help(){
