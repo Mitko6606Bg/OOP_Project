@@ -1,6 +1,8 @@
 package oop.project.hotel;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CheckIn {
 
@@ -9,13 +11,15 @@ public class CheckIn {
     private LocalDate toDate;
     private String note;
     private int guests;
+    private List<String> activities;
 
-    public CheckIn(String room, LocalDate fromDate, LocalDate toDate, String note, int guests) {
+    public CheckIn(String room, LocalDate fromDate, LocalDate toDate, String note, int guests,List<String> activities) {
         this.room = room;
         this.fromDate = fromDate;
         this.toDate = toDate;
         this.note = note;
         this.guests = guests;
+        this.activities = activities != null ? activities : new ArrayList<>();
     }
 
 
@@ -59,9 +63,13 @@ public class CheckIn {
         this.guests = guests;
     }
 
+    public List<String> getActivities() { return activities; }
+    public void setActivities(List<String> activities) { this.activities = activities; }
+
     @Override
     public String toString() {
-        return "Room: " + room + " | From: " + fromDate + " | To: " + toDate + " | Guests: " + guests + " | Note: " + note;
+        String acts = activities.isEmpty() ? "None" : String.join(", ", activities);
+        return "Room: " + room + " | From: " + fromDate + " | To: " + toDate + " | Guests: " + guests + " | Note: " + note + " | Activities: " + acts;
     }
 
 

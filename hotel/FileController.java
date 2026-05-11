@@ -24,6 +24,14 @@ public class FileController {
         this.scanner = new Scanner(System.in);
     }
 
+    public void setFilePath(String path) {
+        this.filePath = path;
+    }
+
+    public void setCheckInsFilePath(String path) {
+        this.checkInsFilePath = path;
+    }
+
     public boolean readRoomsFile(String path) {
         filePath = path;
         rooms.clear();
@@ -171,8 +179,17 @@ public class FileController {
                         LocalDate toDate = LocalDate.parse(currentCheckInData.get(2));
                         String note = currentCheckInData.get(3);
                         int guests = Integer.parseInt(currentCheckInData.get(4));
+                        String activitiesStr = currentCheckInData.get(5);
+                        List<String> activities = new ArrayList<>();
+                        if (!activitiesStr.equals("No activities")) {
+                            String[] acts = activitiesStr.split(",");
+                            for(String act : acts) {
+                                activities.add(act.trim());
+                            }
+                        }
 
-                        checkIns.add(new CheckIn(room, fromDate, toDate, note, guests));
+
+                        checkIns.add(new CheckIn(room, fromDate, toDate, note, guests,activities));
                         currentCheckInData.clear();
                     }
 
@@ -192,27 +209,6 @@ public class FileController {
         }
     }
 
-    public void addCheckInToFile(CheckIn checkIn) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(checkInsFilePath, true))) {
-
-            writer.write(checkIn.getRoom());
-            writer.newLine();
-            writer.write(checkIn.getFromDate().toString());
-            writer.newLine();
-            writer.write(checkIn.getToDate().toString());
-            writer.newLine();
-            writer.write(checkIn.getNote() != null && !checkIn.getNote().isEmpty() ? checkIn.getNote() : "No note");
-            writer.newLine();
-            writer.write(String.valueOf(checkIn.getGuests()));
-            writer.newLine();
-
-            writer.newLine();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
 
     public void writeCheckInsToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(checkInsFilePath))) {
@@ -229,6 +225,13 @@ public class FileController {
                 writer.newLine();
                 writer.write(String.valueOf(checkIn.getGuests()));
                 writer.newLine();
+                if (checkIn.getActivities() != null && !checkIn.getActivities().isEmpty()) {
+                    writer.write(String.join(",", checkIn.getActivities()));
+                } else {
+                    writer.write("No activities");
+                }
+                writer.newLine();
+
 
                 if (i < checkIns.size() - 1) {
                     writer.newLine();

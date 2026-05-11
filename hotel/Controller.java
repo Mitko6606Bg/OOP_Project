@@ -49,6 +49,10 @@ public class Controller {
 
                 switch (command) {
                     case "checkin":
+                        if(checkinFilePath == null){
+                            System.out.println("No checkins file opened! Open a file now using: open -c <filepath> to continue.");
+                            break;
+                        }
                         checkIn();
                         break;
                     case "checkout":
@@ -77,7 +81,26 @@ public class Controller {
                         }
                         break;
                     case "save":
-                        saveFile();
+                        if (parts.length > 1 && parts[1].toLowerCase().equals("as")) {
+                            boolean isCheckin = false;
+                            int pathIndex = 2;
+
+                            if (parts.length > 2 && parts[2].equals("-c")) {
+                                isCheckin = true;
+                                pathIndex = 3;
+                            }
+
+                            if (parts.length > pathIndex) {
+                                saveAs(isCheckin, parts[pathIndex]);
+                            } else {
+                                System.out.println("Missing file path: save as <path> OR save as -c <path>");
+                            }
+                        } else {
+                            saveFiles();
+                        }
+                        break;
+                    case "close":
+                        closeFiles();
                         break;
                     case "showr":
                         showRooms();
@@ -131,12 +154,26 @@ public class Controller {
                             break;
                         }
                         break;
+                    case "room_program":
+                        if (parts.length > 1) {
+                            showRoomProgram(parts[1]);
+                        } else {
+                            System.out.println("Missing room number: room_program <roomNumber>");
+                        }
+                        break;
+                    case "activity_guests":
+                        if (parts.length > 1) {
+                            showActivityGuests(parts[1]);
+                        } else {
+                            System.out.println("Missing activity: activity_guests <activityName>");
+                        }
+                        break;
                     case "!help":
                         help();
                         break;
                     case "exit":
                         System.out.println("Exiting system...");
-                        saveFile();
+                        saveFiles();
                         running = false;
                         break;
                     default:
@@ -172,9 +209,60 @@ public class Controller {
        }
     }
 
-    public void saveFile(){
-        fileController.setRooms(rooms);
-        fileController.writeToFile();
+
+    public void saveFiles() {
+        boolean savedAnything = false;
+
+        if (filePath != null) {
+            fileController.setRooms(rooms);
+            fileController.writeToFile();
+            System.out.println("Successfully saved rooms file.");
+            savedAnything = true;
+        }
+
+        if (checkinFilePath != null) {
+            fileController.setCheckIns(checkins);
+            fileController.writeCheckInsToFile();
+            System.out.println("Successfully saved checkins file.");
+            savedAnything = true;
+        }
+
+        if (!savedAnything) {
+            System.out.println("No files are currently open to save.");
+        }
+    }
+
+    public void saveAs(boolean isCheckinFile, String newPath) {
+
+        newPath = newPath.replace("\"", "");
+
+        if (isCheckinFile) {
+            this.checkinFilePath = newPath;
+            fileController.setCheckInsFilePath(newPath);
+            fileController.setCheckIns(checkins);
+            fileController.writeCheckInsToFile();
+            System.out.println("Successfully saved checkins to " + newPath);
+        } else {
+            this.filePath = newPath;
+            fileController.setFilePath(newPath);
+            fileController.setRooms(rooms);
+            fileController.writeToFile();
+            System.out.println("Successfully saved rooms to " + newPath);
+        }
+    }
+
+
+    public void closeFiles() {
+        this.rooms.clear();
+        this.checkins.clear();
+
+        fileController.setRooms(new ArrayList<>());
+        fileController.setCheckIns(new ArrayList<>());
+
+        this.filePath = null;
+        this.checkinFilePath = null;
+
+        System.out.println("Successfully closed files.");
     }
 
     public void showRooms(){
@@ -243,11 +331,23 @@ public class Controller {
             System.out.print("Guests: ");
             int guests = Integer.parseInt(scanner.nextLine().trim());
 
+
+            System.out.println("Available activities: SPA, Pool, Gym, Movie (or press Enter to skip)");
+            System.out.print("Activities (comma separated): ");
+            String activitiesInput = scanner.nextLine().trim();
+            List<String> activities = new ArrayList<>();
+            if (!activitiesInput.isEmpty()) {
+                String[] acts = activitiesInput.split(",");
+                for (String act : acts) {
+                    activities.add(act.trim());
+                }
+            }
+
+
             roomToCheckin.setAvailable(false);
 
-            CheckIn checkIn = new CheckIn(targetRoom, fromDate, toDate, note, guests);
+            CheckIn checkIn = new CheckIn(targetRoom, fromDate, toDate, note, guests,activities);
 
-            fileController.addCheckInToFile(checkIn);
             checkins.add(checkIn);
             fileController.setCheckIns(checkins);
 
@@ -273,7 +373,7 @@ public class Controller {
                     if(checkin.getRoom().equals(roomNumber)){
                         checkins.remove(checkin);
                         fileController.setCheckIns(checkins);
-                        fileController.writeCheckInsToFile();
+                        //fileController.writeCheckInsToFile();
                         found = true;
                     }
                 }
@@ -475,11 +575,11 @@ public class Controller {
         roomToUnavailable.setNote(note);
         roomToUnavailable.setAvailable(false);
 
-        CheckIn unavailable = new CheckIn(roomNumber, fromDate, toDate, note, 0);
+        CheckIn unavailable = new CheckIn(roomNumber, fromDate, toDate, note, 0,List.of());
 
         checkins.add(unavailable);
         fileController.setCheckIns(checkins);
-        fileController.writeCheckInsToFile();
+        //fileController.writeCheckInsToFile();
         fileController.setRooms(rooms);
 
         System.out.println("   Room " + roomNumber + " is set to unavailable!");
@@ -487,14 +587,82 @@ public class Controller {
         System.out.println("   Note: " + note);
     }
 
-    public void help(){
-        System.out.println("Hotel help menu.");
-        System.out.println("Available commands: ");
-        System.out.println("'checkin', - add a new checkin");
+    public void showRoomProgram(String roomNumber) {
+        checkins = fileController.getCheckIns();
+        boolean found = false;
+
+        System.out.println("\n--- Program for Room " + roomNumber + " ---");
+        for (CheckIn checkIn : checkins) {
+            if (checkIn.getRoom().equals(roomNumber)) {
+                found = true;
+                if (checkIn.getActivities().isEmpty()) {
+                    System.out.println("No activities scheduled for this room.");
+                } else {
+                    for (String activity : checkIn.getActivities()) {
+                        System.out.println("- " + activity);
+                    }
+                }
+            }
+        }
+
+        if (!found) {
+            System.out.println("Room not found or not currently checked in.");
+        }
+        System.out.println("-------------------------------\n");
+    }
+
+    public void showActivityGuests(String targetActivity) {
+        checkins = fileController.getCheckIns();
+        boolean found = false;
+
+        System.out.println("\n--- Guests signed up for: " + targetActivity + " ---");
+        for (CheckIn checkIn : checkins) {
+            for (String activity : checkIn.getActivities()) {
+                if (activity.equalsIgnoreCase(targetActivity.trim())) {
+                    System.out.println("Room: " + checkIn.getRoom() + " (Guests: " + checkIn.getGuests() + ")");
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found) {
+            System.out.println("No guests are signed up for this activity.");
+        }
+        System.out.println("----------------------------------------\n");
+    }
+
+    public void help() {
+        System.out.println("\n--- Hotel Help Menu ---");
+
+        System.out.println("File Operations:");
+        System.out.println("'open <path>', - loads a rooms file");
+        System.out.println("'open -c <path>', - loads a checkins file");
+        System.out.println("'save', - saves all current data to their respective files");
+        System.out.println("'save as <path>', - saves rooms to a new file path");
+        System.out.println("'save as -c <path>', - saves checkins to a new file path");
+        System.out.println("'close', - closes current files and clears memory");
+
+        System.out.println("\nDisplay Information:");
+        System.out.println("'showr', - displays all loaded rooms");
         System.out.println("'display_checkin', - displays all current checkins");
-        System.out.println("'open', - open <path> - opens file and keeps it in memory");
-        System.out.println("'showr', - displays all the rooms from the loaded file.");
-        System.out.println("'exit', - exits the program");
+
+        System.out.println("\nReservations & Search:");
+        System.out.println("'checkin', - starts the checkin process");
+        System.out.println("'checkout <roomNumber>', - checks out a guest and frees the room");
+        System.out.println("'availability [YYYY-MM-DD]', - shows free rooms (default is today)");
+        System.out.println("'find <beds> <from> <to>', - finds available rooms for specific dates");
+        System.out.println("'!find <beds> <from> <to>', - emergency VIP room search (relocates guests)");
+        System.out.println("'unavailable <room> <from> <to> <note>', - manually blocks a room");
+
+        System.out.println("\nActivities:");
+        System.out.println("'room_program <roomNumber>', - shows activities for a specific room");
+        System.out.println("'activity_guests <activity>', - shows all guests signed up for an activity");
+
+        System.out.println("\nSystem:");
+        System.out.println("'!help', - displays this menu");
+        System.out.println("'exit', - saves all data and exits the program");
+        System.out.println("-----------------------\n");
     }
 
 

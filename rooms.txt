@@ -2,23 +2,23 @@
 Apartment
 4
 false
-
+no note
 
 
 302
 Couple
 2
 false
-
+no note
 
 303
 Couple
 2
 false
-
+no note
 
 304
 Couple
 2
 true
-
+no note
