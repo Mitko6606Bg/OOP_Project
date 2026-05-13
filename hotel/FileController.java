@@ -146,23 +146,34 @@ public class FileController {
         this.rooms = rooms;
     }
 
-    public void readCheckInsFile(String path) {
+    public void readCheckInsFile(String path,List<Room> availableRooms) {
         checkInsFilePath = path;
         checkIns.clear();
         File file = new File(checkInsFilePath);
 
         if (!file.exists()) {
-            try {
-                if (file.getParentFile() != null) {
-                    file.getParentFile().mkdirs();
+            System.out.println("Do you want to create file at: " + path);
+            System.out.println("y/n");
+            String choice = scanner.nextLine().trim();
+
+
+            if(choice.equals("y")){
+                try {
+                    if (file.getParentFile() != null) {
+                        file.getParentFile().mkdirs();
+                    }
+                    file.createNewFile();
+                    System.out.println("File successfully created!");
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(1);
                 }
-                file.createNewFile();
-                System.out.println("File successfully created!");
+            }else{
                 return;
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.exit(1);
             }
+
+
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -174,7 +185,18 @@ public class FileController {
 
                 if (line == null || line.trim().isEmpty()) {
                     if (!currentCheckInData.isEmpty()) {
-                        String room = currentCheckInData.get(0);
+                        String roomString = currentCheckInData.get(0);
+                        Room matchedRoom = null;
+                        for (Room r : availableRooms) {
+                            if (r.getRoomNumber().equals(roomString)) {
+                                matchedRoom = r;
+                                break;
+                            }
+                        }
+                        if (matchedRoom == null) {
+                            matchedRoom = new Room(roomString, "Unknown", 0, false, "Room data missing");
+                        }
+
                         LocalDate fromDate = LocalDate.parse(currentCheckInData.get(1));
                         LocalDate toDate = LocalDate.parse(currentCheckInData.get(2));
                         String note = currentCheckInData.get(3);
@@ -189,7 +211,8 @@ public class FileController {
                         }
 
 
-                        checkIns.add(new CheckIn(room, fromDate, toDate, note, guests,activities));
+
+                        checkIns.add(new CheckIn(matchedRoom, fromDate, toDate, note, guests,activities));
                         currentCheckInData.clear();
                     }
 
@@ -215,7 +238,7 @@ public class FileController {
             for (int i = 0; i < checkIns.size(); i++) {
                 CheckIn checkIn = checkIns.get(i);
 
-                writer.write(checkIn.getRoom());
+                writer.write(checkIn.getRoom().getRoomNumber());
                 writer.newLine();
                 writer.write(checkIn.getFromDate().toString());
                 writer.newLine();

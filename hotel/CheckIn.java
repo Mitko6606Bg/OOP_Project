@@ -6,14 +6,15 @@ import java.util.List;
 
 public class CheckIn {
 
-    private String room;
+    private Room room;
     private LocalDate fromDate;
     private LocalDate toDate;
     private String note;
     private int guests;
     private List<String> activities;
 
-    public CheckIn(String room, LocalDate fromDate, LocalDate toDate, String note, int guests,List<String> activities) {
+
+    public CheckIn(Room room, LocalDate fromDate, LocalDate toDate, String note, int guests,List<String> activities) {
         this.room = room;
         this.fromDate = fromDate;
         this.toDate = toDate;
@@ -23,11 +24,11 @@ public class CheckIn {
     }
 
 
-    public String getRoom() {
+    public Room getRoom() {
         return room;
     }
 
-    public void setRoom(String room) {
+    public void setRoom(Room room) {
         this.room = room;
     }
 
@@ -69,7 +70,7 @@ public class CheckIn {
     @Override
     public String toString() {
         String acts = activities.isEmpty() ? "None" : String.join(", ", activities);
-        return "Room: " + room + " | From: " + fromDate + " | To: " + toDate + " | Guests: " + guests + " | Note: " + note + " | Activities: " + acts;
+        return "Room: " + room.getRoomNumber() + " | From: " + fromDate + " | To: " + toDate + " | Guests: " + guests + " | Note: " + note + " | Activities: " + acts;
     }
 
 
