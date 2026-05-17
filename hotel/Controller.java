@@ -2,6 +2,7 @@ package oop.project.hotel;
 import oop.project.hotel.Commands.*;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.time.format.DateTimeParseException;
 
@@ -22,7 +23,7 @@ public class Controller {
         commands.put("save as", new SaveAsCommand(this));
         commands.put("close", new CloseCommand(this));
         commands.put("showr", new ShowRoomsCommand(this));
-        commands.put("display_checkin", new DisplayCheckinsCommand(this));
+        commands.put("dsp_checkins", new DisplayCheckinsCommand(this));
         commands.put("checkin", new CheckInCommand(this));
         commands.put("checkout", new CheckOutCommand(this));
         commands.put("availability", new AvailabilityCommand(this));
@@ -31,6 +32,7 @@ public class Controller {
         commands.put("!find", new EmergencyFindCommand(this));
         commands.put("activity_guests", new ActivityGuestsCommand(this));
         commands.put("room_program", new RoomProgramCommand(this));
+        commands.put("report", new ReportCommand(this));
     }
 
 
@@ -62,8 +64,12 @@ public class Controller {
             String[] parts = input.split(" ");
             String commandName = parts[0].toLowerCase();
 
+            if (commandName.equals("save") && parts.length > 1 && parts[1].equalsIgnoreCase("as")) {
+                commandName = "save as";
+            }
+
             if (filePath == null && !commandName.equals("open") && !commandName.equals("exit") && !commandName.equals("!help")) {
-                System.out.println("No file opened! Open a file now using: open <filepath> to continue.");
+                System.out.println("No rooms file opened! Open a file now using: open <filepath> to continue.");
                 continue;
             }
 
@@ -93,12 +99,14 @@ public class Controller {
 
         if(fileController.readRoomsFile(path)){
             filePath = path;
+            this.rooms = fileController.getRooms();
         }
     }
 
     public void openCheckinFile(String path){
         checkinFilePath = path;
         fileController.readCheckInsFile(checkinFilePath, this.rooms);
+        this.checkins = fileController.getCheckIns();
     }
 
     public boolean checkIfCheckinFileIsOpened(){
@@ -154,16 +162,41 @@ public class Controller {
 
 
     public void closeFiles() {
-        this.rooms.clear();
-        this.checkins.clear();
+        boolean anythingOpen = false;
 
-        fileController.setRooms(new ArrayList<>());
-        fileController.setCheckIns(new ArrayList<>());
+        if (this.checkinFilePath != null) {
+            anythingOpen = true;
+            System.out.print("Do you want to close the checkins file? (y/n): ");
+            String choice = scanner.nextLine().trim().toLowerCase();
 
-        this.filePath = null;
-        this.checkinFilePath = null;
+            if (choice.equals("y")) {
+                this.checkins.clear();
+                fileController.setCheckIns(new ArrayList<>());
+                this.checkinFilePath = null;
+                System.out.println("Successfully closed checkins file.");
+            } else {
+                System.out.println("Checkins file remains open.");
+            }
+        }
 
-        System.out.println("Successfully closed files.");
+        if (this.filePath != null) {
+            anythingOpen = true;
+            System.out.print("Do you want to close the rooms file? (y/n): ");
+            String choice = scanner.nextLine().trim().toLowerCase();
+
+            if (choice.equals("y")) {
+                this.rooms.clear();
+                fileController.setRooms(new ArrayList<>());
+                this.filePath = null;
+                System.out.println("Successfully closed rooms file.");
+            } else {
+                System.out.println("Rooms file remains open.");
+            }
+        }
+
+        if (!anythingOpen) {
+            System.out.println("No files are currently open to close.");
+        }
     }
 
     public void showRooms(){
@@ -232,6 +265,11 @@ public class Controller {
             System.out.print("Guests: ");
             int guests = Integer.parseInt(scanner.nextLine().trim());
 
+            if (guests > roomToCheckin.getBeds()) {
+                System.out.println("Error: Room " + targetRoom + " has only " + roomToCheckin.getBeds() + " beds");
+                return;
+            }
+
 
             System.out.println("Available activities: SPA, Pool, Gym, Movie (or press Enter to skip)");
             System.out.print("Activities (comma separated): ");
@@ -275,8 +313,6 @@ public class Controller {
         if (toRemove != null) {
             toRemove.getRoom().setAvailable(true);
             toRemove.getRoom().setNote("");
-            checkins.remove(toRemove);
-            fileController.setCheckIns(checkins);
             System.out.println("Successfully checkout from room: " + roomNumber);
         } else {
             System.out.println("No active check-in found for room " + roomNumber);
@@ -521,6 +557,40 @@ public class Controller {
         System.out.println("----------------------------------------\n");
     }
 
+    public void reportRoomUsage(LocalDate reportFrom, LocalDate reportTo) {
+        if (reportFrom.isAfter(reportTo)) {
+            System.out.println("Error: The start date must be before the end.");
+            return;
+        }
+
+        Map<String, Long> roomUsage = new HashMap<>();
+
+        for (CheckIn checkIn : checkins) {
+
+            LocalDate start = checkIn.getFromDate().isAfter(reportFrom) ? checkIn.getFromDate() : reportFrom;
+
+            LocalDate end = checkIn.getToDate().isBefore(reportTo) ? checkIn.getToDate() : reportTo;
+
+            if (start.isBefore(end)) {
+                long daysUsed = ChronoUnit.DAYS.between(start, end);
+                String roomNum = checkIn.getRoom().getRoomNumber();
+
+                roomUsage.put(roomNum, roomUsage.getOrDefault(roomNum, 0L) + daysUsed);
+            }
+        }
+
+        System.out.println("\n--- Room Report (" + reportFrom + " to " + reportTo + ") ---");
+        if (roomUsage.isEmpty()) {
+            System.out.println("No rooms used in period.");
+        } else {
+            for (Map.Entry<String, Long> entry : roomUsage.entrySet()) {
+                System.out.println("Room " + entry.getKey() + " is used " + entry.getValue() + " days.");
+            }
+        }
+        System.out.println("--------------------------------------------------\n");
+    }
+
+
     public void help() {
         System.out.println("\n--- Hotel Help Menu ---");
 
@@ -534,12 +604,13 @@ public class Controller {
 
         System.out.println("\nDisplay Information:");
         System.out.println("'showr', - displays all loaded rooms");
-        System.out.println("'display_checkin', - displays all current checkins");
+        System.out.println("'dsp_checkins', - displays all current checkins");
 
         System.out.println("\nReservations & Search:");
         System.out.println("'checkin', - starts the checkin process");
         System.out.println("'checkout <roomNumber>', - checks out a guest and frees the room");
         System.out.println("'availability [YYYY-MM-DD]', - shows free rooms (default is today)");
+        System.out.println("'report <from> <to> - Displays a report on the rooms used and the number of days in a given period.");
         System.out.println("'find <beds> <from> <to>', - finds available rooms for specific dates");
         System.out.println("'!find <beds> <from> <to>', - emergency VIP room search (relocates guests)");
         System.out.println("'unavailable <room> <from> <to> <note>', - manually blocks a room");
